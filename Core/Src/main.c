@@ -48,9 +48,8 @@ uint16_t ButtonMatrixState = 0;
 
 //Button TimeStamp
 uint32_t ButtonMatrixTimestamp = 0;
-
-uint16_t Password_State =0 ;
-uint32_t Test = 0;
+char Test = ' ';
+uint16_t Password_State = 0;
 int LED = 0;
 uint32_t Number = 0;
 /* USER CODE END PV */
@@ -82,7 +81,6 @@ int main(void) {
 
 	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
 
-
 	HAL_Init();
 
 	/* USER CODE BEGIN Init */
@@ -101,6 +99,7 @@ int main(void) {
 	MX_USART2_UART_Init();
 	/* USER CODE BEGIN 2 */
 	uint32_t ButtonTimeStamp = 0;
+	uint32_t ButtonMatrixCheck[2];
 	/* USER CODE END 2 */
 
 	/* Infinite loop */
@@ -110,17 +109,18 @@ int main(void) {
 
 		/* USER CODE BEGIN 3 */
 		ButtonMatrixUpdate();
-		if (HAL_GetTick() - ButtonTimeStamp >= 100) //ms
-				{
-			if (ButtonMatrixState != 0) {
-				Number = ButtonMatrixState;
+
+			ButtonMatrixCheck[0] = ButtonMatrixState;
+			if (ButtonMatrixCheck[1]==0 && ButtonMatrixCheck[0]!=0) {
+				Number = ButtonMatrixCheck[0];
 				switch (Password_State) {
 				case 0:
 					if (Number == 0b1000000) //[7]
 							{
 						Password_State = 1;
-					} else if (Number != 0b1000000) {
-						Password_State = 0;
+					}else
+					{
+						Password_State = 12;
 					}
 					break;
 				case 1:
@@ -128,64 +128,82 @@ int main(void) {
 							{
 						Password_State = 2;
 					} else{
-						Password_State = 0;
+						Password_State = 12;
 					}
 					break;
 				case 2:
 					if (Number == 0b10000000000) //[11]
 							{
 						Password_State = 3;
-					} else if (Number != 0b1000000000) {
-						Password_State = 0;
+					} else {
+						Password_State = 12;
 					}
 					break;
 				case 3:
 					if (Number == 0b10000) //[5]
 							{
 						Password_State = 4;
+					}else {
+						Password_State = 12;
 					}
 					break;
 				case 4:
 					if (Number == 0b1000000000000) //[13]
 							{
 						Password_State = 5;
+					}else {
+						Password_State = 12;
 					}
 					break;
 				case 5:
 					if (Number == 0b100000) //[6]
 							{
 						Password_State = 6;
+					}else {
+						Password_State = 12;
 					}
 					break;
 				case 6:
 					if (Number == 0b1000000000000) //[13]
 							{
 						Password_State = 7;
+					}else {
+						Password_State = 12;
 					}
 					break;
 				case 7:
 					if (Number == 0b1000000000000) //[13]
 							{
 						Password_State = 8;
+					}else {
+						Password_State = 12;
 					}
 					break;
 				case 8:
 					if (Number == 0b1000000000000) //[13]
 							{
 						Password_State = 9;
+					}else {
+						Password_State = 12;
 					}
 					break;
 				case 9:
 					if (Number == 0b1000000000) //[10]
 							{
 						Password_State = 10;
+					}else {
+						Password_State = 12;
 					}
 					break;
 				case 10:
 					if (Number == 0b100000000) //[9]
 							{
 						LED = 1;
+					}else {
+						Password_State = 12;
 					}
+					break;
+				case 12:
 					break;
 				}
 				if (Number == 0b1000000000000000) {
@@ -196,11 +214,13 @@ int main(void) {
 				}
 				if (Number == 0b1000) {
 					Password_State = 0;
+					LED=0;
 					HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
 				}
 			}
+			ButtonMatrixCheck[1] = ButtonMatrixCheck[0];
 
-		}
+
 
 	}
 	/* USER CODE END 3 */
