@@ -47,7 +47,12 @@ UART_HandleTypeDef huart2;
 uint16_t ButtonMatrixState = 0;
 
 //Button TimeStamp
-uint32_t ButtonMatrixTimeStamp = 0;
+uint32_t ButtonMatrixTimestamp = 0;
+
+uint16_t Password_State =0 ;
+uint32_t Test = 0;
+int LED = 0;
+uint32_t Number = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -76,6 +81,8 @@ int main(void) {
 	/* MCU Configuration--------------------------------------------------------*/
 
 	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+
+
 	HAL_Init();
 
 	/* USER CODE BEGIN Init */
@@ -93,7 +100,7 @@ int main(void) {
 	MX_GPIO_Init();
 	MX_USART2_UART_Init();
 	/* USER CODE BEGIN 2 */
-
+	uint32_t ButtonTimeStamp = 0;
 	/* USER CODE END 2 */
 
 	/* Infinite loop */
@@ -102,6 +109,99 @@ int main(void) {
 		/* USER CODE END WHILE */
 
 		/* USER CODE BEGIN 3 */
+		ButtonMatrixUpdate();
+		if (HAL_GetTick() - ButtonTimeStamp >= 100) //ms
+				{
+			if (ButtonMatrixState != 0) {
+				Number = ButtonMatrixState;
+				switch (Password_State) {
+				case 0:
+					if (Number == 0b1000000) //[7]
+							{
+						Password_State = 1;
+					} else if (Number != 0b1000000) {
+						Password_State = 0;
+					}
+					break;
+				case 1:
+					if (Number == 0b1000000000) //[10]
+							{
+						Password_State = 2;
+					} else{
+						Password_State = 0;
+					}
+					break;
+				case 2:
+					if (Number == 0b10000000000) //[11]
+							{
+						Password_State = 3;
+					} else if (Number != 0b1000000000) {
+						Password_State = 0;
+					}
+					break;
+				case 3:
+					if (Number == 0b10000) //[5]
+							{
+						Password_State = 4;
+					}
+					break;
+				case 4:
+					if (Number == 0b1000000000000) //[13]
+							{
+						Password_State = 5;
+					}
+					break;
+				case 5:
+					if (Number == 0b100000) //[6]
+							{
+						Password_State = 6;
+					}
+					break;
+				case 6:
+					if (Number == 0b1000000000000) //[13]
+							{
+						Password_State = 7;
+					}
+					break;
+				case 7:
+					if (Number == 0b1000000000000) //[13]
+							{
+						Password_State = 8;
+					}
+					break;
+				case 8:
+					if (Number == 0b1000000000000) //[13]
+							{
+						Password_State = 9;
+					}
+					break;
+				case 9:
+					if (Number == 0b1000000000) //[10]
+							{
+						Password_State = 10;
+					}
+					break;
+				case 10:
+					if (Number == 0b100000000) //[9]
+							{
+						LED = 1;
+					}
+					break;
+				}
+				if (Number == 0b1000000000000000) {
+					if (LED == 1) {
+						HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);
+						LED = 0;
+					}
+				}
+				if (Number == 0b1000) {
+					Password_State = 0;
+					HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
+				}
+			}
+
+		}
+
 	}
 	/* USER CODE END 3 */
 }
@@ -253,38 +353,43 @@ static void MX_GPIO_Init(void) {
 }
 
 /* USER CODE BEGIN 4 */
+//input 0-3,output 4-7
 GPIO_TypeDef *ButtonMatrixPort[8] = { GPIOA, GPIOB, GPIOB, GPIOB, GPIOA, GPIOC,
-		GPIOB, GPIOA };
+GPIOB, GPIOA };
 
 uint16_t ButtonMatrixPin[8] = { GPIO_PIN_10, GPIO_PIN_3, GPIO_PIN_5, GPIO_PIN_4,
-		GPIO_PIN_9, GPIO_PIN_7, GPIO_PIN_6, GPIO_PIN_7 };
+GPIO_PIN_9, GPIO_PIN_7, GPIO_PIN_6, GPIO_PIN_7 };
 
-uint8_t ButtonMatrixLine = 0;
+uint8_t ButtonMatrixRow = 0;
+;
+//บอกว่าอยู๋ที่Rไหน
 void ButtonMatrixUpdate() {
-	if (HAL_GetTick() - ButtonMatrixTimeStamp >= 100) {
-		ButtonMatrixTimeStamp = HAL_GetTick();
+	if (HAL_GetTick() - ButtonMatrixTimestamp >= 100) {
+		ButtonMatrixTimestamp = HAL_GetTick();
 		int i;
-		for(i = 0;i<=4;i++)
-		{//0-3
-			GPIO_PinState PinState = HAL_GPIO_ReadPin(ButtonMatrixPort[i], ButtonMatrixPin[i]);
-			if(PinState == GPIO_PIN_RESET)//Button Press
-			{
-				ButtonMatrixState |= ((uint16_t)1<<(i+ButtonMatrixLine*4));
-			}
-			else
-			{
-				ButtonMatrixState &= ~((uint16_t)0x1<<(i+ButtonMatrixLine*4));
+		for (i = 0; i < 4; i += 1) { //0-3
+			GPIO_PinState PinState = HAL_GPIO_ReadPin(ButtonMatrixPort[i],
+					ButtonMatrixPin[i]);
+			if (PinState == GPIO_PIN_RESET) // Button Press
+					{
+				ButtonMatrixState |= (uint16_t) 1 << (i + ButtonMatrixRow * 4);
+			} else {
+				ButtonMatrixState &=
+						~((uint16_t) 1 << (i + ButtonMatrixRow * 4));
 			}
 		}
-		uint8_t NowOutputPin = ButtonMatrixLine + 4;
-		HAL_GPIO_WritePin(ButtonMatrixPort[NowOutputPin], ButtonMatrixPin[NowOutputPin],GPIO_PIN_SET);
+		uint8_t NowOutputPin = ButtonMatrixRow + 4;
+		//SET Rn
+		HAL_GPIO_WritePin(ButtonMatrixPort[NowOutputPin],
+				ButtonMatrixPin[NowOutputPin], GPIO_PIN_SET);
+		// update New Row
+		ButtonMatrixRow = (ButtonMatrixRow + 1) % 4;
 
-		//update New line
-		ButtonMatrixLine = (ButtonMatrixLine+1)%4;
+		uint8_t NextOutputPin = ButtonMatrixRow + 4;
+		//Reset Rn+1
+		HAL_GPIO_WritePin(ButtonMatrixPort[NextOutputPin],
+				ButtonMatrixPin[NextOutputPin], GPIO_PIN_RESET);
 
-		uint8_t NexOutputPin = ButtonMatrixLine +4;
-
-		HAL_GPIO_WritePin(ButtonMatrixPort[NexOutputPin], ButtonMatrixPin[NowOutputPin],GPIO_PIN_RESET);
 	}
 }
 /* USER CODE END 4 */
